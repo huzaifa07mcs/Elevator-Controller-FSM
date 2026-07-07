@@ -1,8 +1,58 @@
-// ============================================================================
-// Module Name:  elevatorcontroller
-// Description:  A synchronous 4-floor elevator controller using a clean
-//               3-Always-Block FSM architecture with prioritized scheduling.
-// ============================================================================
+//==========================================================================
+// Copyright (c) 2026 Huzaifa
+//==========================================================================
+//
+// FILE NAME    : elevatorcontroller.v
+// PROJECT      : FPGA-Based 4-Floor Elevator Controller
+// TYPE         : RTL Design (Moore FSM)
+// LANGUAGE     : Verilog HDL
+//
+// UNIVERSITY   : National University of Sciences and Technology (NUST)
+// DEPARTMENT   : Electrical Engineering
+//
+// AUTHOR       : Huzaifa
+// EMAIL        : huzaifa.e19@gmail.com
+//
+//==========================================================================
+//
+// RELEASE HISTORY
+//
+// VERSION   DATE         AUTHOR      DESCRIPTION
+// -------   ----------   ----------  --------------------------------------
+// 1.0       07-Jul-2026  Huzaifa     Initial project release
+//
+//==========================================================================
+//
+// KEYWORDS
+// Elevator Controller, FPGA, Verilog HDL, Moore FSM, RTL Design,
+// Digital Design, Sequential Logic, Floor Request Scheduling,
+// Door Control, Synchronous System
+//
+//==========================================================================
+//
+// PURPOSE
+// This project implements a synthesizable 4-floor Elevator Controller using
+// Verilog HDL based on a Moore Finite State Machine (FSM). The controller
+// is intended for FPGA implementation and demonstrates the design of a
+// synchronous digital control system for elevator operation.
+//
+// The controller accepts multiple floor requests, determines the target
+// floor, controls upward and downward movement, manages door operation,
+// and indicates system busy status while servicing requests.
+//
+// Main Features:
+//   • 4-Floor Elevator Control
+//   • Moore FSM Architecture
+//   • Multiple Floor Request Handling
+//   • Automatic Direction Selection
+//   • Floor-by-Floor Movement
+//   • Programmable Movement Timing
+//   • Programmable Door Open Timing
+//   • Busy Status Indication
+//   • Synthesizable RTL Design
+//   • FPGA-Oriented Implementation
+//
+
 
 module elevatorcontroller(
     input clk,
@@ -15,15 +65,15 @@ module elevatorcontroller(
     output reg [1:0] currentfloor
 );
 
-parameter DOORTIME = 20;   // Door remains open for 20 clock cycles
-parameter MOVETIME = 10;   // Time taken to move one floor
+parameter DOORTIME = 20;   
+parameter MOVETIME = 10;   
 
 reg [2:0] state;
 reg [2:0] nextstate;
-// Datapath registers
+
 reg [1:0] targetfloor;
 reg [3:0] requests;        // Stores all pending floor requests
-// Timing counters
+
 reg [7:0] movecounter;
 reg [7:0] doorcounter;
 
@@ -35,9 +85,7 @@ localparam S0 = 3'b000,    // Idle
            S4 = 3'b100,    // Door open
            S5 = 3'b101;    // Door close
 
-//=====================================================
-// Movement and door timing counters
-//=====================================================
+
 always @(posedge clk or posedge reset) begin
     if (reset) begin
         movecounter <= 0;
@@ -58,9 +106,8 @@ always @(posedge clk or posedge reset) begin
     end
 end
 
-//=====================================================
 // State Register
-//=====================================================
+
 always @(posedge clk or posedge reset) begin
     if (reset)
         state <= S0;
@@ -68,9 +115,9 @@ always @(posedge clk or posedge reset) begin
         state <= nextstate;
 end
 
-//=====================================================
+
 // Next State Logic
-//=====================================================
+
 always @(*) begin
     nextstate = state;
 
@@ -126,9 +173,9 @@ always @(*) begin
     endcase
 end
 
-//=====================================================
+
 // Output Logic (Moore FSM)
-//=====================================================
+
 always @(*) begin
     motorup   = 0;
     motordown = 0;
@@ -161,9 +208,9 @@ always @(*) begin
     endcase
 end
 
-//=====================================================
+
 // Datapath Logic
-//=====================================================
+
 always @(posedge clk or posedge reset) begin
     if (reset) begin
         requests     <= 4'b0000;
@@ -178,7 +225,7 @@ always @(posedge clk or posedge reset) begin
         case (state)
 
             // Select the next floor to be served
-            // (Lowest numbered floor has highest priority)
+           
             S1: begin
                 if (requests[0])
                     targetfloor <= 2'd0;
