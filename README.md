@@ -2,7 +2,7 @@
 
 A synthesizable **4-floor Elevator Controller** designed in **Verilog HDL** using a **Moore Finite State Machine (FSM)** architecture. The controller is intended for FPGA implementation and demonstrates the design of a synchronous digital control system capable of handling multiple floor requests, controlling elevator movement, and managing door operations.
 
-> **Project Status:** RTL Design Completed | Intended for FPGA Implementation | Hardware Validation Pending
+
 
 ---
 
