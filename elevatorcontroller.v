@@ -1,0 +1,214 @@
+// ============================================================================
+// Module Name:  elevatorcontroller
+// Description:  A synchronous 4-floor elevator controller using a clean
+//               3-Always-Block FSM architecture with prioritized scheduling.
+// ============================================================================
+
+module elevatorcontroller(
+    input clk,
+    input reset,
+    input [3:0] request,
+    output reg motorup,
+    output reg motordown,
+    output reg dooropen,
+    output reg busy,
+    output reg [1:0] currentfloor
+);
+
+parameter DOORTIME = 20;   // Door remains open for 20 clock cycles
+parameter MOVETIME = 10;   // Time taken to move one floor
+
+reg [2:0] state;
+reg [2:0] nextstate;
+// Datapath registers
+reg [1:0] targetfloor;
+reg [3:0] requests;        // Stores all pending floor requests
+// Timing counters
+reg [7:0] movecounter;
+reg [7:0] doorcounter;
+
+// FSM States
+localparam S0 = 3'b000,    // Idle
+           S1 = 3'b001,    // Decide direction
+           S2 = 3'b010,    // Move up
+           S3 = 3'b011,    // Move down
+           S4 = 3'b100,    // Door open
+           S5 = 3'b101;    // Door close
+
+//=====================================================
+// Movement and door timing counters
+//=====================================================
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        movecounter <= 0;
+        doorcounter <= 0;
+    end
+    else begin
+        // Count while elevator is moving
+        if (state == S2 || state == S3)
+            movecounter <= movecounter + 1;
+        else
+            movecounter <= 0;
+
+        // Count while door is open
+        if (state == S4)
+            doorcounter <= doorcounter + 1;
+        else
+            doorcounter <= 0;
+    end
+end
+
+//=====================================================
+// State Register
+//=====================================================
+always @(posedge clk or posedge reset) begin
+    if (reset)
+        state <= S0;
+    else
+        state <= nextstate;
+end
+
+//=====================================================
+// Next State Logic
+//=====================================================
+always @(*) begin
+    nextstate = state;
+
+    case (state)
+
+        // Wait until any request arrives
+        S0:
+            if (requests != 4'b0000 || request != 4'b0000)
+                nextstate = S1;
+
+        // Decide whether to move up, down or open door
+        S1:
+            if (targetfloor > currentfloor)
+                nextstate = S2;
+            else if (targetfloor < currentfloor)
+                nextstate = S3;
+            else
+                nextstate = S4;
+
+        // Move up one floor at a time
+        S2:
+            if (movecounter >= MOVETIME) begin
+                if (currentfloor + 2'd1 == targetfloor)
+                    nextstate = S4;
+                else
+                    nextstate = S1; // Re-evaluate direction for multi-floor travel
+            end
+
+        // Move down one floor at a time
+        S3:
+            if (movecounter >= MOVETIME) begin
+                if (currentfloor - 2'd1 == targetfloor)
+                    nextstate = S4;
+                else
+                    nextstate = S1; // Re-evaluate direction for multi-floor travel
+            end
+
+        // Keep door open for DOORTIME cycles
+        S4:
+            if (doorcounter >= DOORTIME)
+                nextstate = S5;
+
+        // Close door and check for more requests
+        S5:
+            if (requests != 4'b0000)
+                nextstate = S1;
+            else
+                nextstate = S0;
+
+        default:
+            nextstate = S0;
+
+    endcase
+end
+
+//=====================================================
+// Output Logic (Moore FSM)
+//=====================================================
+always @(*) begin
+    motorup   = 0;
+    motordown = 0;
+    dooropen  = 0;
+    busy      = 0;
+
+    case (state)
+
+        S1:
+            busy = 1;
+
+        S2: begin
+            motorup = 1;
+            busy = 1;
+        end
+
+        S3: begin
+            motordown = 1;
+            busy = 1;
+        end
+
+        S4: begin
+            dooropen = 1;
+            busy = 1;
+        end
+
+        S5:
+            busy = 1;
+
+    endcase
+end
+
+//=====================================================
+// Datapath Logic
+//=====================================================
+always @(posedge clk or posedge reset) begin
+    if (reset) begin
+        requests     <= 4'b0000;
+        currentfloor <= 2'd0;
+        targetfloor  <= 2'd0;
+    end
+    else begin
+
+        // Latch every new floor request
+        requests <= requests | request;
+
+        case (state)
+
+            // Select the next floor to be served
+            // (Lowest numbered floor has highest priority)
+            S1: begin
+                if (requests[0])
+                    targetfloor <= 2'd0;
+                else if (requests[1])
+                    targetfloor <= 2'd1;
+                else if (requests[2])
+                    targetfloor <= 2'd2;
+                else if (requests[3])
+                    targetfloor <= 2'd3;
+            end
+
+            // Safely increment currentfloor exactly once when timer expires
+            S2: begin
+                if (movecounter >= MOVETIME)
+                    currentfloor <= currentfloor + 2'd1;
+            end
+
+            // Safely decrement currentfloor exactly once when timer expires
+            S3: begin
+                if (movecounter >= MOVETIME)
+                    currentfloor <= currentfloor - 2'd1;
+            end
+
+            //Safe synthesis-friendly bit-clearing using a bitwise mask
+            S5: begin
+                requests <= requests & ~(4'b0001 << targetfloor);
+            end
+
+        endcase
+    end
+end
+
+endmodule
