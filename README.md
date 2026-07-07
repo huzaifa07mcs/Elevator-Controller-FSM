@@ -196,9 +196,7 @@ The design avoids non-synthesizable behavioral constructs and follows standard s
 # Author
 
 **Huzaifa**
-
 Electrical Engineering Student
-
 National University of Sciences and Technology (NUST)
 
 
