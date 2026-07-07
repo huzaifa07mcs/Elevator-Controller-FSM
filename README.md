@@ -199,6 +199,8 @@ The design avoids non-synthesizable behavioral constructs and follows standard s
 
 Electrical Engineering Student
 
+National University of Sciences and Technology (NUST)
+
 
 ---
 
